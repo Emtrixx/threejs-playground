@@ -3,28 +3,11 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import * as dat from "dat.gui";
 import Stats from "three/examples/jsm/libs/stats.module";
 import "./style.css";
-import { TGALoader } from 'three/examples/jsm/loaders/TGALoader.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-//Scene
-// const scene: THREE.Scene = new THREE.Scene();
-// scene.background = new THREE.Color(0x202020);
-// var axesHelper = new THREE.AxesHelper(6);
-// scene.add(axesHelper);
+import BasicCharacterControllerInput from "./CharacterController/BasicCharacterControllerInput";
 
-// //Camera
-// const camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera(
-//   75,
-//   window.innerWidth / window.innerHeight,
-//   0.1,
-//   1000
-// );
-// // const camera: THREE.OrthographicCamera = new THREE.OrthographicCamera(-3,3,3,-3,0,100)
-// // camera.lookAt(new THREE.Vector3(0,0,0))
 
-// //Renderer
-// const renderer: THREE.WebGLRenderer = new THREE.WebGLRenderer();
-// renderer.setSize(window.innerWidth, window.innerHeight);
-// document.body.appendChild(renderer.domElement);
 
 // //Geometry
 // const geometry: THREE.BoxGeometry = new THREE.BoxGeometry();
@@ -124,6 +107,8 @@ class WorldGen {
   _threejs: THREE.WebGLRenderer;
   _camera: THREE.PerspectiveCamera;
   _scene: THREE.Scene;
+  _controls: BasicCharacterController;
+  _previousRAF: any;
 
   constructor() {
     this._Initialize();
@@ -197,18 +182,18 @@ class WorldGen {
     // const rt = tgaLoader.load("./images/skybox/skyboxMap/interstellar_rt.tga")
     // const lt = tgaLoader.load("./images/skybox/skyboxMap/interstellar_lt.tga")
 
-    const loader = new THREE.CubeTextureLoader();
-    const texture = loader.load([
-      "./images/skybox/skyboxMap/interstellar_bk.tga",
-      "./images/skybox/skyboxMap/interstellar_up.tga",
-      "./images/skybox/skyboxMap/interstellar_dn.tga",
-      "./images/skybox/skyboxMap/interstellar_rt.tga",
-      "./images/skybox/skyboxMap/interstellar_lf.tga",
-    ]);
-    this._scene.background = texture;
+    // const loader = new THREE.CubeTextureLoader();
+    // const texture = loader.load([
+    //   "./images/skybox/skyboxMap/interstellar_bk.tga",
+    //   "./images/skybox/skyboxMap/interstellar_up.tga",
+    //   "./images/skybox/skyboxMap/interstellar_dn.tga",
+    //   "./images/skybox/skyboxMap/interstellar_rt.tga",
+    //   "./images/skybox/skyboxMap/interstellar_lf.tga",
+    // ]);
+    // this._scene.background = texture;
     this._scene.background = new THREE.Color(0x202020);
 
-    //Geometry Plane
+    //Geometry
     const plane = new THREE.Mesh(
       new THREE.PlaneGeometry(100, 100, 10, 10),
       new THREE.MeshStandardMaterial({
@@ -220,7 +205,26 @@ class WorldGen {
     plane.rotation.x = -Math.PI / 2;
     this._scene.add(plane);
 
+    this._previousRAF = null;
+    // this._LoadModel()
+    this._LoadAnimatedModel()
     this._RAF();
+  }
+
+  _LoadAnimatedModel() {
+    const params = {
+      camera: this._camera,
+      scene: this._scene,
+    }
+    this._controls = new BasicCharacterController(params);
+  }
+
+  _Step(timeElapsed) {
+    const timeElapsedS = timeElapsed * 0.001;
+
+    if (this._controls) {
+      this._controls.Update(timeElapsedS);
+    }
   }
 
   _OnWindowResize() {
@@ -231,82 +235,170 @@ class WorldGen {
   }
 
   _RAF() {
-    requestAnimationFrame(() => {
-      this._threejs.render(this._scene, this._camera);
+    requestAnimationFrame((t) => {
+      if (this._previousRAF === null) {
+        this._previousRAF = t;
+      }
+
       this._RAF();
+
+      this._threejs.render(this._scene, this._camera);
+      this._Step(t - this._previousRAF);
+      this._previousRAF = t;
     });
   }
+
+  // _LoadModel() {
+  //   const loader = new GLTFLoader()
+  //   loader.load('./models/Boxhead.gltf', gltf => {
+  //     gltf.scene.traverse(c => {
+  //       c.castShadow = true
+  //     })
+  //     this._scene.add(gltf.scene)
+  //   })
+  // }
 }
 
 class BasicCharacterController {
+
   _input: BasicCharacterControllerInput;
   _stateMachine: FiniteStateMachine;
-  constructor() {
+  _decceleration: THREE.Vector3;
+  _acceleration: THREE.Vector3;
+  _velocity: THREE.Vector3;
+  _params: any;
+  _target: any;
+
+  constructor(params) {
+    this._params = params;
     this._input = new BasicCharacterControllerInput();
     this._stateMachine = new FiniteStateMachine();
-  }
-}
 
-class BasicCharacterControllerInput {
-  _keys: {
-    forward: boolean;
-    backward: boolean;
-    left: boolean;
-    right: boolean;
-    space: boolean;
-  };
-  constructor() {
-    this._Init();
+    this._decceleration = new THREE.Vector3(-0.0005, -0.0001, -5.0);
+    this._acceleration = new THREE.Vector3(1, 0.25, 50.0);
+    this._velocity = new THREE.Vector3(0, 0, 0);
+
+    this._LoadModels();
   }
 
-  _Init() {
-    this._keys = {
-      forward: false,
-      backward: false,
-      left: false,
-      right: false,
-      space: false,
-    };
-    document.addEventListener("keydown", (e) => this._onKeyDown(e), false);
-    document.addEventListener("keyup", (e) => this._onKeyUp(e), false);
+  _LoadModels() {
+    const loader = new GLTFLoader()
+    loader.load('./models/Boxhead.gltf', gltf => {
+      gltf.scene.traverse(c => {
+        c.castShadow = true
+      })
+      this._target = gltf;
+      this._params.scene.add(this._target.scene);
+    })
+    // const loader = new FBXLoader();
+    // loader.setPath('./resources/zombie/');
+    // loader.load('mremireh_o_desbiens.fbx', (fbx) => {
+    //   fbx.scale.setScalar(0.1);
+    //   fbx.traverse(c => {
+    //     c.castShadow = true;
+    //   });
+
+      
+
+    //   this._mixer = new THREE.AnimationMixer(this._target);
+
+    //   this._manager = new THREE.LoadingManager();
+    //   this._manager.onLoad = () => {
+    //     this._stateMachine.SetState('idle');
+    //   };
+
+    //   const _OnLoad = (animName, anim) => {
+    //     const clip = anim.animations[0];
+    //     const action = this._mixer.clipAction(clip);
+  
+    //     this._animations[animName] = {
+    //       clip: clip,
+    //       action: action,
+    //     };
+    //   };
+
+    //   const loader = new FBXLoader(this._manager);
+    //   loader.setPath('./resources/zombie/');
+    //   loader.load('walk.fbx', (a) => { _OnLoad('walk', a); });
+    //   loader.load('run.fbx', (a) => { _OnLoad('run', a); });
+    //   loader.load('idle.fbx', (a) => { _OnLoad('idle', a); });
+    //   loader.load('dance.fbx', (a) => { _OnLoad('dance', a); });
+    // });
   }
-  _onKeyDown(e: KeyboardEvent): any {
-    switch (e.code) {
-      case "KeyW":
-        this._keys.forward = true;
-        break;
-      case "KeyA":
-        this._keys.left = true;
-        break;
-      case "KeyS":
-        this._keys.backward = true;
-        break;
-      case "KeyD":
-        this._keys.right = true;
-        break;
-      case "Space":
-        this._keys.space = true;
-        break;
+
+  Update(timeInSeconds) {
+    // this._stateMachine.Update(timeInSeconds, this._input);
+    if (!this._target) {
+      return;
     }
-  }
-  _onKeyUp(e: KeyboardEvent): any {
-    switch (e.code) {
-      case "KeyW":
-        this._keys.forward = false;
-        break;
-      case "KeyA":
-        this._keys.left = false;
-        break;
-      case "KeyS":
-        this._keys.backward = false;
-        break;
-      case "KeyD":
-        this._keys.right = false;
-        break;
-      case "Space":
-        this._keys.space = false;
-        break;
+
+    const velocity = this._velocity;
+    const frameDecceleration = new THREE.Vector3(
+        velocity.x * this._decceleration.x,
+        velocity.y * this._decceleration.y,
+        velocity.z * this._decceleration.z
+    );
+    frameDecceleration.multiplyScalar(timeInSeconds);
+    frameDecceleration.z = Math.sign(frameDecceleration.z) * Math.min(
+        Math.abs(frameDecceleration.z), Math.abs(velocity.z));
+
+    velocity.add(frameDecceleration);
+
+    const controlObject = this._target;
+    const _Q = new THREE.Quaternion();
+    const _A = new THREE.Vector3();
+    const _R = controlObject.scene.quaternion.clone();
+
+    const acc = this._acceleration.clone();
+    if (this._input._keys.shift) {
+      acc.multiplyScalar(2.0);
     }
+
+    // if (this._stateMachine._currentState.Name == 'dance') {
+    //   acc.multiplyScalar(0.0);
+    // }
+
+    if (this._input._keys.forward) {
+      velocity.z += acc.z * timeInSeconds;
+    }
+    if (this._input._keys.backward) {
+      velocity.z -= acc.z * timeInSeconds;
+    }
+    if (this._input._keys.left) {
+      _A.set(0, 1, 0);
+      _Q.setFromAxisAngle(_A, 4.0 * Math.PI * timeInSeconds * this._acceleration.y);
+      _R.multiply(_Q);
+    }
+    if (this._input._keys.right) {
+      _A.set(0, 1, 0);
+      _Q.setFromAxisAngle(_A, 4.0 * -Math.PI * timeInSeconds * this._acceleration.y);
+      _R.multiply(_Q);
+    }
+
+    controlObject.scene.quaternion.copy(_R);
+
+    const oldPosition = new THREE.Vector3();
+    oldPosition.copy(controlObject.scene.position);
+
+    const forward = new THREE.Vector3(0, 0, 1);
+    forward.applyQuaternion(controlObject.scene.quaternion);
+    forward.normalize();
+
+    const sideways = new THREE.Vector3(1, 0, 0);
+    sideways.applyQuaternion(controlObject.scene.quaternion);
+    sideways.normalize();
+
+    sideways.multiplyScalar(velocity.x * timeInSeconds);
+    forward.multiplyScalar(velocity.z * timeInSeconds);
+
+    controlObject.scene.position.add(forward);
+    controlObject.scene.position.add(sideways);
+
+    oldPosition.copy(controlObject.scene.position);
+
+    // if (this._mixer) {
+    //   this._mixer.update(timeInSeconds);
+    // }
   }
 }
 
@@ -339,7 +431,6 @@ class FiniteStateMachine {
   }
 }
 
-const player = new BasicCharacterController();
 let _APP = null;
 
 window.addEventListener('DOMContentLoaded', () => {
