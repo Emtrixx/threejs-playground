@@ -8,7 +8,6 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import BasicCharacterControllerInput from "./CharacterController/BasicCharacterControllerInput";
 
 
-
 // //Geometry
 // const geometry: THREE.BoxGeometry = new THREE.BoxGeometry();
 // const material: THREE.MeshBasicMaterial = new THREE.MeshBasicMaterial({
@@ -182,16 +181,17 @@ class WorldGen {
     // const rt = tgaLoader.load("./images/skybox/skyboxMap/interstellar_rt.tga")
     // const lt = tgaLoader.load("./images/skybox/skyboxMap/interstellar_lt.tga")
 
-    // const loader = new THREE.CubeTextureLoader();
-    // const texture = loader.load([
-    //   "./images/skybox/skyboxMap/interstellar_bk.tga",
-    //   "./images/skybox/skyboxMap/interstellar_up.tga",
-    //   "./images/skybox/skyboxMap/interstellar_dn.tga",
-    //   "./images/skybox/skyboxMap/interstellar_rt.tga",
-    //   "./images/skybox/skyboxMap/interstellar_lf.tga",
-    // ]);
-    // this._scene.background = texture;
-    this._scene.background = new THREE.Color(0x202020);
+    const loader = new THREE.CubeTextureLoader();
+    const texture = loader.load([
+      "./images/Meadow/posz.jpg",
+      "./images/Meadow/negz.jpg",
+      "./images/Meadow/posy.jpg",
+      "./images/Meadow/negy.jpg",
+      "./images/Meadow/negx.jpg",
+      "./images/Meadow/posx.jpg",
+    ]);
+    this._scene.background = texture;
+    // this._scene.background = new THREE.Color(0x202020);
 
     //Geometry
     const plane = new THREE.Mesh(
