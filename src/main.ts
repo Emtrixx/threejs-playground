@@ -4,6 +4,7 @@ import BasicCharacterController from "./CharacterController/BasicCharacterContro
 import * as dat from "dat.gui";
 import Stats from "three/examples/jsm/libs/stats.module";
 import "./style.css";
+import { GLTF, GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 // //Geometry
 // const geometry: THREE.BoxGeometry = new THREE.BoxGeometry();
@@ -103,10 +104,13 @@ class WorldGen {
   _controls: BasicCharacterController;
   _previousRAF: any;
   _stats: Stats;
+  _zombie: Zombie;
 
   constructor() {
     this._Initialize();
   }
+
+  // public get()
 
   _Initialize() {
     //Renderer
@@ -206,6 +210,7 @@ class WorldGen {
     this._previousRAF = null;
     // this._LoadModel()
     this._LoadAnimatedModel();
+    this._LoadZombie()
     this._RAF();
   }
 
@@ -217,11 +222,23 @@ class WorldGen {
     this._controls = new BasicCharacterController(params);
   }
 
+  _LoadZombie() {
+    const params = {
+      camera: this._camera,
+      scene: this._scene,
+    };
+    this._zombie = new Zombie(params);
+  }
+
   _Step(timeElapsed) {
-    const timeElapsedS = timeElapsed * 0.001;
+    const time = timeElapsed * 0.001;
 
     if (this._controls) {
-      this._controls.Update(timeElapsedS);
+      this._controls.Update(time);
+    }
+
+    if(this._zombie) {
+      this._zombie.Update(time)
     }
   }
 
@@ -256,6 +273,44 @@ class WorldGen {
   //   })
   // }
 }
+
+class Zombie {
+  _target: GLTF;
+  _params: any;
+  constructor(params) {
+    this._params = params
+    this._LoadModels()
+  }
+
+  _LoadModels() {
+    const loader = new GLTFLoader()
+    loader.load('./models/Boxhead.gltf', gltf => {
+      gltf.scene.traverse(c => {
+        c.castShadow = true
+      })
+      gltf.scene.position.set(Math.random() * 20,0,Math.random() * 20)
+      this._target = gltf;
+      this._params.scene.add(this._target.scene);
+    })
+  }
+
+  Update(timeInSeconds) {
+    if (!this._target) {
+      return;
+    }
+
+    const controlObject = this._target
+    // controlObject.scene.lookAt(0,0,0)
+    
+    const forward = new THREE.Vector3(0, 0, 1);
+    forward.applyQuaternion(controlObject.scene.quaternion);
+    forward.normalize();
+
+    forward.multiplyScalar(1 * timeInSeconds);
+
+    controlObject.scene.position.add(forward);
+  }
+} 
 
 let _APP = null;
 
