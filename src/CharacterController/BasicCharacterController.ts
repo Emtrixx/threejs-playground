@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import BasicCharacterControllerInput from "./BasicCharacterControllerInput";
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import FiniteStateMachine from "../CharacterAnimation/FiniteStateMachine";
 
 
@@ -27,14 +28,15 @@ export default class BasicCharacterController {
     }
   
     _LoadModels() {
-      const loader = new GLTFLoader()
-      loader.load('./models/Boxhead.gltf', gltf => {
-        gltf.scene.traverse(c => {
-          c.castShadow = true
-        })
-        this._target = gltf;
-        this._params.scene.add(this._target.scene);
-      })
+      // const loader = new GLTFLoader()
+      // loader.load('./models/Boxhead.gltf', gltf => {
+      //   gltf.scene.traverse(c => {
+      //     c.castShadow = true
+      //   })
+      //   this._target = gltf;
+      //   this._params.scene.add(this._target.scene);
+      // })
+      // --------------------------
       // const loader = new FBXLoader();
       // loader.setPath('./resources/zombie/');
       // loader.load('mremireh_o_desbiens.fbx', (fbx) => {
@@ -69,6 +71,17 @@ export default class BasicCharacterController {
       //   loader.load('idle.fbx', (a) => { _OnLoad('idle', a); });
       //   loader.load('dance.fbx', (a) => { _OnLoad('dance', a); });
       // });
+      // --------------------
+
+      const loader = new OBJLoader();
+
+      loader.load(
+        // resource URL
+        './models/cat.obj',
+         object => {
+          this._target = object;
+          this._params.scene.add(this._target);      
+        })
     }
   
     Update(timeInSeconds) {
@@ -88,8 +101,11 @@ export default class BasicCharacterController {
           Math.abs(frameDecceleration.z), Math.abs(velocity.z));
   
       velocity.add(frameDecceleration);
-  
-      const controlObject = this._target;
+      
+      //add to scene because gltf uses this syntax
+      const controlObject = {scene: null}
+      controlObject.scene = this._target;
+
       const _Q = new THREE.Quaternion();
       const _A = new THREE.Vector3();
       const _R = controlObject.scene.quaternion.clone();
