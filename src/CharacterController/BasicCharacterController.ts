@@ -77,7 +77,7 @@ export default class BasicCharacterController {
 
       loader.load(
         // resource URL
-        './models/cat.obj',
+        './models/soccerPlayer.obj',
          object => {
           this._target = object;
           this._params.scene.add(this._target);      

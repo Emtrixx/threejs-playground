@@ -226,6 +226,7 @@ class WorldGen {
     const params = {
       camera: this._camera,
       scene: this._scene,
+      player: this._controls
     };
     this._zombie = new Zombie(params);
   }
@@ -280,6 +281,7 @@ class Zombie {
   constructor(params) {
     this._params = params
     this._LoadModels()
+    console.log(params.player)
   }
 
   _LoadModels() {
@@ -300,7 +302,7 @@ class Zombie {
     }
 
     const controlObject = this._target
-    // controlObject.scene.lookAt(0,0,0)
+    controlObject.scene.lookAt(this._params.player._target.position)
     
     const forward = new THREE.Vector3(0, 0, 1);
     forward.applyQuaternion(controlObject.scene.quaternion);
